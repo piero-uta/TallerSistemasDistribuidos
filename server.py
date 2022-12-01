@@ -1,33 +1,31 @@
 import socket
 import _thread
 import pickle
-
+import random
 
 HEADERSIZE = 10
 
 CANTIDADLOBBY = 10
 HEADERSIZE = 10
 
-ncliente=0
-
 lobbies = []
-
 #crear el diccionario con los datos del lobby vacios
-socketJugador=socket.socket()
-
-print(socketJugador)
+SOCKETVACIO=socket.socket()
 
 for i in range(CANTIDADLOBBY):
-    lobbies.append({"jugador1": socketJugador, "jugador2": socketJugador})
+    lobbies.append({"turno":random.randint(1,2),"jugador1": SOCKETVACIO, "jugador2": SOCKETVACIO})
 
 usuariosEnLobby = []
 for i in range(CANTIDADLOBBY):
     usuariosEnLobby.append(0)
 
+
 #crear socket
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.bind((socket.gethostname(), 5555))
-s.listen(5)
+s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+s.bind((socket.gethostname(), 5000))
+s.listen(CANTIDADLOBBY*2)
+
 
 def recibir_mensaje(conn):
     full_msg = b''
@@ -43,7 +41,7 @@ def recibir_mensaje(conn):
             msglen = int(msg[:HEADERSIZE])
             new_msg = False
 
-        print(f"tamaño completo del mensaje: {msglen}")
+        #print(f"tamaño completo del mensaje: {msglen}")
 
         full_msg += msg
 
@@ -53,99 +51,142 @@ def recibir_mensaje(conn):
             mensaje = pickle.loads(full_msg[HEADERSIZE:])
             print(mensaje)
             return mensaje
+    raise Exception("error en recibir mensaje")
 
 def enviar_mensaje(mensaje, conn):
     mensaje = pickle.dumps(mensaje)
     mensaje = bytes(f'{len(mensaje):<{HEADERSIZE}}', "utf-8") + mensaje
     conn.send(mensaje)
 
-#funcion hilo cliente
-def hilo_cliente(conn, ncliente):
-    lobby=-1
-    jugador="no hay jugador"
-    njugador=0
+def hilo_cliente(conn,):
     conectado = False
-    while True:
-        #verificar conexion
-        try:
-            recibir = recibir_mensaje(conn)
-        except:
-            print("error en recibir mensaje")
-            break
+    njugador = 0
+    #lobby del cliente
+    lobby = 0
+    jugando = False
 
+    while True:
         if conectado == False:
+            try:
+                recibir = recibir_mensaje(conn)
+            except:
+                print("error en recibir mensaje")
+                conn.close()
+                return
             if recibir["opcion"] == "refrescar":
                 enviar_mensaje(usuariosEnLobby, conn)
                 conn.close()
                 print("conexion cerrada por refrescar")
-                break            
-            elif recibir["opcion"] == "conectar":
+                return
+            elif recibir["opcion"] == "conectar":  
                 lobby=int(recibir["lobby"])-1
-                jugador = conn
-                if lobbies[lobby]["jugador1"] == socketJugador:
-                    print("jugador1")
+                if lobbies[lobby]["jugador1"] == SOCKETVACIO:
+                    print("jugador 1, lobby:"+ str(lobby) + " es: " + str(conn))
                     usuariosEnLobby[lobby]+=1
-                    njugador=1
                     lobbies[lobby]["jugador1"] = conn
+                    enviar_mensaje("conectado", conn)
+                    lobbyJugador = lobby
+                    njugador = 1
                     conectado = True
-                elif lobbies[lobby]["jugador2"] == socketJugador:
-                    print("jugador2")
+                elif lobbies[lobby]["jugador2"] == SOCKETVACIO:
+                    print("jugador 2, lobby:"+ str(lobby) + " es: " + str(conn))
                     usuariosEnLobby[lobby]+=1
-                    njugador=2
                     lobbies[lobby]["jugador2"] = conn
+                    enviar_mensaje("conectado", conn)
+                    lobbyJugador = lobby
+                    njugador = 2
                     conectado = True
                 else:
                     enviar_mensaje("lobby lleno", conn)
                     conn.close()
                     print("lobby lleno")
-                    break 
-                enviar_mensaje("conectado", conn)
+                    return
         else:
-            print(recibir)
-            #reenviar a todos los jugadores del lobby            
-            if njugador == 1:
-                #verificar si el jugador 2 esta conectado
-                if lobbies[lobby]["jugador2"] != socketJugador:
-                    print(lobbies[lobby]["jugador2"])
-                    enviar_mensaje(recibir, lobbies[lobby]["jugador2"])
-                #confirmar a jugador
-                enviar_mensaje("confirmar", conn)
-            elif njugador == 2:
-                #verificar si el jugador 1 esta conectado
-                if lobbies[lobby]["jugador1"] != socketJugador:
-                    print(lobbies[lobby]["jugador1"])
-                    enviar_mensaje(recibir, lobbies[lobby]["jugador1"])
-                enviar_mensaje("confirmar", conn)
+            if jugando == False:
+                try:
+                    recibir = recibir_mensaje(conn)
+                except:
+                    print("error en recibir mensaje")
+                    conn.close()
+                    return
+                if recibir["opcion"] == "esperandoJuego":         
+                    if lobbies[lobby]["jugador1"] != SOCKETVACIO and lobbies[lobby]["jugador2"] != SOCKETVACIO:
+                        jugando = True
+                        print("comenzar juego lobby", lobby)
+                        enviar_mensaje("empezar", conn)
+                    else:
+                        enviar_mensaje("esperandoOtroJugador", conn)
             else:
-                print("error en enviar mensaje")
-            
-    if lobby != -1:
-        if jugador == socketJugador:
-            print("error en el jugador")
-        else:
-            if njugador == 1:
-                usuariosEnLobby[lobby]-=1
-                lobbies[lobby]["jugador1"] = socketJugador
-            elif njugador == 2:
-                usuariosEnLobby[lobby]-=1
-                lobbies[lobby]["jugador2"] = socketJugador
+                try:
+                    recibir = recibir_mensaje(conn)
+                except:
+                    print("error en recibir mensaje")
+                    if njugador == 1:
+                        lobbies[lobbyJugador]["jugador1"] = SOCKETVACIO
+                    else:
+                        lobbies[lobbyJugador]["jugador2"] = SOCKETVACIO
+                    usuariosEnLobby[lobbyJugador]-=1
+                    conn.close()
+                    return
+                if recibir["opcion"] == "jugando":
+                    if njugador == lobbies[lobbyJugador]["turno"]:
+                        enviar_mensaje("turno", conn)
+                        try:
+                            recibir = recibir_mensaje(conn)
+                        except:
+                            print("error en recibir mensaje")
+                            if njugador == 1:
+                                lobbies[lobbyJugador]["jugador1"] = SOCKETVACIO
+                            else:
+                                lobbies[lobbyJugador]["jugador2"] = SOCKETVACIO
+                            usuariosEnLobby[lobbyJugador]-=1                        
+                            conn.close()
+                            return
+                        if recibir["opcion"] == "movimiento":
+                            if njugador == 1:
+                                enviar_mensaje("recibido", conn)
+                                enviar_mensaje(recibir, lobbies[lobbyJugador]["jugador2"])
+                            else:
+                                enviar_mensaje("recibido", conn)
+                                enviar_mensaje(recibir, lobbies[lobbyJugador]["jugador1"])
+                            if lobbies[lobbyJugador]["turno"] == 1:
+                                lobbies[lobbyJugador]["turno"] = 2
+                            else:
+                                lobbies[lobbyJugador]["turno"] = 1
+                        elif recibir["opcion"] == "salir":
+                            if njugador == 1:
+                                lobbies[lobbyJugador]["jugador1"] = SOCKETVACIO
+                            else:
+                                lobbies[lobbyJugador]["jugador2"] = SOCKETVACIO
+                            usuariosEnLobby[lobbyJugador]-=1
+                            conn.close()
+                            return
+                    else:
+                        try:
+                            enviar_mensaje("esperar", conn)
+                        except:
+                            print("error en enviar mensaje")
+                            if njugador == 1:
+                                lobbies[lobbyJugador]["jugador1"] = SOCKETVACIO
+                            else:
+                                lobbies[lobbyJugador]["jugador2"] = SOCKETVACIO
+                            usuariosEnLobby[lobbyJugador]-=1
+                            conn.close()
+                            return
+                        recibir = recibir_mensaje(conn)
+                else:
+                    if njugador == 1:
+                        lobbies[lobbyJugador]["jugador1"] = SOCKETVACIO
+                    else:
+                        lobbies[lobbyJugador]["jugador2"] = SOCKETVACIO
+                    usuariosEnLobby[lobbyJugador]-=1
+                    conn.close()
+                    return
 
-    print("conexion cerrada")
-    
 
-ncliente = 0
+              
 
 while True:
-    #recibe una conexion
-    clientsocket, address = s.accept()
-    print(f"Conexion de {address} establecida.")
-    print(clientsocket)
-    ncliente += 1
-    #crea un hilo para el cliente
-    _thread.start_new_thread(hilo_cliente, (clientsocket, ncliente))
-    
-
-
-
-    
-    
+    conn, addr = s.accept()
+    print(f"conexion de {addr} establecida")
+    _thread.start_new_thread(hilo_cliente, (conn,))

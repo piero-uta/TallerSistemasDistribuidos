@@ -1,5 +1,7 @@
 import socket
 import pickle
+import sys
+import select
 
 HEADERSIZE = 10
 
@@ -28,61 +30,103 @@ def recibir_mensaje(conn):
             print(mensaje)
             return mensaje
 
-def refrescar_lobbies():
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect((socket.gethostname(), 5555))
-    enviar = pickle.dumps({"opcion": "refrescar"})
-    enviar = bytes(f'{len(enviar):<{HEADERSIZE}}', "utf-8") + enviar
-    s.send(enviar)
-    lobbies = recibir_mensaje(s)
-    print("N lobbby| jugador1| jugador2")
-    for i in range(len(lobbies)):
-        print(i+1, lobbies[i],"/", 2)
-    s.close()
-
-def conectar_lobby(lobby):
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect((socket.gethostname(), 5555))
-    enviar = {"opcion": "conectar", "lobby": lobby}
-    enviar = pickle.dumps(enviar)
-    enviar = bytes(f'{len(enviar):<{HEADERSIZE}}', "utf-8") + enviar
-    s.send(enviar)
-    mensaje = recibir_mensaje(s)
-    print(mensaje)
-    if mensaje == "lobby lleno":
-        s.close()
-        return False
-    else:
-        return s
-    
 def enviar_mensaje(mensaje, conn):
     mensaje = pickle.dumps(mensaje)
     mensaje = bytes(f'{len(mensaje):<{HEADERSIZE}}', "utf-8") + mensaje
     conn.send(mensaje)
+    return recibir_mensaje(conn)
+
+def refrescar_lobbies():
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect((socket.gethostname(), 5000))
+    enviar = {"opcion": "refrescar"}
+    lobbies = enviar_mensaje(enviar, s)
+    print("N lobbby| usuarios")
+    for i in range(len(lobbies)):
+        print(i+1, lobbies[i],"/", 2)
+    s.close()
+
+
+conectado = False
+s =socket.socket()
+empezarJuego=False
 
 while True:
-    opcion = input("Elije opcion: (-1 salir, 0 refrescar, 1 conectar a lobby): ")
-    if opcion == "-1":
-        break
-    elif opcion == "0":
-        refrescar_lobbies()
-    elif opcion == "1":
-        lobby = input("Elije lobby: ")
-        conn = conectar_lobby(lobby)
-        if conn == False:
-            print("Lobby lleno")
+    if conectado == False:
+        opcion = input("Elije opcion: (-1 salir, 0 refrescar, 1 conectar a lobby): ")
+        if opcion == "-1":
+            break
+        elif opcion == "0":
+            refrescar_lobbies()
+        elif opcion == "1":
+            lobby = input("Elije lobby: ")
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.connect((socket.gethostname(), 5000))
+            enviar = {"opcion": "conectar", "lobby": lobby}
+            try:                 
+                recibir = enviar_mensaje(enviar, s)                
+            except:
+                print("error en conectar")
+                s.close()
+                continue
+
+            print("conectado")
+            if recibir == "lobby lleno":
+                print("lobby lleno")
+            else:
+                print("conectado")
+                conectado = True
+                print("esperando a otro jugador")
+    else:
+        if empezarJuego == False:
+            try:
+                recibir = enviar_mensaje({"opcion": "esperandoJuego"}, s)              
+            except:
+                print("error el recibir empezar juego") 
+                conectado = False
+                s.close()
+            if recibir == "empezar":
+                    print("Comienza juego")
+                    empezarJuego=True
         else:
-            print("Conectado")
-            while True:
-                mensaje = input("Mensaje: ")
-                enviar_mensaje(mensaje, conn)
-                mensaje = recibir_mensaje(conn)
-                print(mensaje)
+            try:
+                recibir = enviar_mensaje({"opcion": "jugando"}, s)
                 
-                
-            
-            
-        
-        
-        
-    
+            except:
+                print("error en recibir resultado")
+                conectado = False
+                s.close()
+
+            if recibir == "turno":
+                print("Es tu turno")
+                movimiento = input("Elije movimiento: ")
+                try:
+                    recibir = enviar_mensaje({"opcion":"movimiento","movimiento":movimiento}, s)
+                except:
+                    print("error en enviar movimiento")
+                    conectado = False
+                    empezarJuego=True
+                    s.close()
+            elif recibir == "esperar":
+                print("Esperando a otro jugador")
+                try:
+                    recibir = enviar_mensaje({"opcion":"esperandoJugador"}, s)                       
+                except:
+                    print("error en recibir movimiento")
+                    conectado = False
+                    empezarJuego=True
+                    s.close()
+                print("El otro jugador hizo", recibir["movimiento"])
+            elif recibir == "ganaste":
+                print("ganaste")
+                conectado = False
+                s.close()
+            elif recibir == "perdiste":
+                print("perdiste")
+                conectado = False
+                s.close()
+            elif recibir == "empate":
+                print("empate")
+                conectado = False
+                s.close()
+
