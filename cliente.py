@@ -1,7 +1,6 @@
 import socket
 import pickle
 import pygame 
-import sys
 import time
 
 pygame.init()
@@ -13,6 +12,7 @@ conectado = False
 s =socket.socket()
 empezarJuego=False
 board = []
+graphical_board = []
 FONT = pygame.font.Font("assets/Roboto-Regular.ttf", 32)
 COLOR_TEXTO = (6, 26, 64)
 
@@ -86,15 +86,27 @@ def verificar_ganador():
     return ""
     
 def crear_board():
+    global graphical_board
     for i in range(3):
         board.append([])
         for j in range(3):
             board[i].append("")
+    graphical_board = [[[None, None], [None, None], [None, None]], 
+                    [[None, None], [None, None], [None, None]], 
+                    [[None, None], [None, None], [None, None]]]
    
 def reiniciar_board():
+    global board
+    global graphical_board
     for i in range(3):
         for j in range(3):
             board[i][j] = ""
+
+    #reiniciar graphical_board
+    for i in range(3):
+        for j in range(3):
+            graphical_board[i][j][0] = None
+            graphical_board[i][j][1] = None
 
 crear_board()
 
@@ -110,9 +122,7 @@ O_IMG = pygame.image.load("assets/O.png")
 BG_COLOR = (214, 201, 227)
 
 
-graphical_board = [[[None, None], [None, None], [None, None]], 
-                    [[None, None], [None, None], [None, None]], 
-                    [[None, None], [None, None], [None, None]]]
+
 
 SCREEN.fill(BG_COLOR)
 SCREEN.blit(BOARD, (64, 64))
@@ -146,7 +156,6 @@ while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
-            sys.exit()
     if conectado == False:
         opcion = input("Elije opcion: (-1 salir, 0 refrescar, 1 conectar a lobby): ")
         if opcion == "-1":
@@ -187,14 +196,7 @@ while True:
             #verificar si alguien gano
             ganador = verificar_ganador()
             if ganador != "":
-                reiniciar_board()
-                #reiniciar graphical_board
-                for i in range(3):
-                    for j in range(3):
-                        graphical_board[i][j][0] = None
-                        graphical_board[i][j][1] = None
-
-                
+                reiniciar_board()              
                 time.sleep(2)
                 print("gano", ganador)
                 if ganador == "X":
@@ -263,16 +265,4 @@ while True:
                 render_board(board, X_IMG, O_IMG)
                 pygame.display.update()
 
-            elif recibir == "ganaste":
-                print("ganaste")
-                conectado = False
-                s.close()
-            elif recibir == "perdiste":
-                print("perdiste")
-                conectado = False
-                s.close()
-            elif recibir == "empate":
-                print("empate")
-                conectado = False
-                s.close()
         

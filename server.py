@@ -3,8 +3,6 @@ import _thread
 import pickle
 import random
 
-HEADERSIZE = 10
-
 CANTIDADLOBBY = 10
 HEADERSIZE = 10
 
