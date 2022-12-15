@@ -2,6 +2,7 @@ import socket
 import _thread
 import pickle
 import random
+import time
 
 CANTIDADLOBBY = 10
 HEADERSIZE = 10
@@ -77,7 +78,7 @@ def hilo_cliente(conn,):
                 print("conexion cerrada por refrescar")
                 return
             elif recibir["opcion"] == "conectar":  
-                lobby=int(recibir["lobby"])-1
+                lobby=int(recibir["lobby"])
                 if lobbies[lobby]["jugador1"] == SOCKETVACIO:
                     print("jugador 1, lobby:"+ str(lobby) + " es: " + str(conn))
                     usuariosEnLobby[lobby]+=1
@@ -104,8 +105,7 @@ def hilo_cliente(conn,):
                 try:
                     recibir = recibir_mensaje(conn)
                 except:
-                    print("error en recibir mensaje")
-                    conn.close()
+                    desconectar_jugador(njugador, lobbyJugador, conn)
                     return
                 if recibir["opcion"] == "esperandoJuego":         
                     if lobbies[lobby]["jugador1"] != SOCKETVACIO and lobbies[lobby]["jugador2"] != SOCKETVACIO:
@@ -113,18 +113,13 @@ def hilo_cliente(conn,):
                         print("comenzar juego lobby", lobby)
                         enviar_mensaje("empezar", conn)
                     else:
+                        time.sleep(2)
                         enviar_mensaje("esperandoOtroJugador", conn)
             else:
                 try:
                     recibir = recibir_mensaje(conn)
                 except:
-                    print("error en recibir mensaje")
-                    if njugador == 1:
-                        lobbies[lobbyJugador]["jugador1"] = SOCKETVACIO
-                    else:
-                        lobbies[lobbyJugador]["jugador2"] = SOCKETVACIO
-                    usuariosEnLobby[lobbyJugador]-=1
-                    conn.close()
+                    desconectar_jugador(njugador, lobbyJugador, conn)
                     return
                 if recibir["opcion"] == "jugando":
                     if njugador == lobbies[lobbyJugador]["turno"]:
@@ -132,13 +127,7 @@ def hilo_cliente(conn,):
                         try:
                             recibir = recibir_mensaje(conn)
                         except:
-                            print("error en recibir mensaje")
-                            if njugador == 1:
-                                lobbies[lobbyJugador]["jugador1"] = SOCKETVACIO
-                            else:
-                                lobbies[lobbyJugador]["jugador2"] = SOCKETVACIO
-                            usuariosEnLobby[lobbyJugador]-=1                        
-                            conn.close()
+                            desconectar_jugador(njugador, lobbyJugador, conn)
                             return
                         if recibir["opcion"] == "movimiento":
                             if njugador == 1:
@@ -163,25 +152,23 @@ def hilo_cliente(conn,):
                         try:
                             enviar_mensaje("esperar", conn)
                         except:
-                            print("error en enviar mensaje")
-                            if njugador == 1:
-                                lobbies[lobbyJugador]["jugador1"] = SOCKETVACIO
-                            else:
-                                lobbies[lobbyJugador]["jugador2"] = SOCKETVACIO
-                            usuariosEnLobby[lobbyJugador]-=1
-                            conn.close()
+                            desconectar_jugador(njugador, lobbyJugador, conn)
                             return
                         recibir = recibir_mensaje(conn)
                 else:
-                    if njugador == 1:
-                        lobbies[lobbyJugador]["jugador1"] = SOCKETVACIO
-                    else:
-                        lobbies[lobbyJugador]["jugador2"] = SOCKETVACIO
-                    usuariosEnLobby[lobbyJugador]-=1
-                    conn.close()
+                    desconectar_jugador(njugador, lobbyJugador, conn)
                     return
 
-
+def desconectar_jugador(njugador, lobbyJugador, conn):
+    print("error en recibir mensaje")
+    if njugador == 1:
+        lobbies[lobbyJugador]["jugador1"] = SOCKETVACIO
+    else:
+        lobbies[lobbyJugador]["jugador2"] = SOCKETVACIO
+    usuariosEnLobby[lobbyJugador]-=1
+    conn.close()
+    return
+    
               
 
 while True:

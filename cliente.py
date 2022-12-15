@@ -5,7 +5,6 @@ import time
 
 pygame.init()
 pygame.display.set_caption("El gato!!")
- 
 
 HEADERSIZE = 10
 conectado = False
@@ -13,9 +12,11 @@ s =socket.socket()
 empezarJuego=False
 board = []
 graphical_board = []
-FONT = pygame.font.Font("assets/Roboto-Regular.ttf", 32)
+FONT = pygame.font.Font("assets/Roboto-Regular.ttf", 30)
 COLOR_TEXTO = (6, 26, 64)
-
+COLOR_SECUNDARIO = (115, 165, 128)
+lobbies = []
+botones_lobby = []
 
 #funcion recibir mensajes
 def recibir_mensaje(conn):
@@ -46,14 +47,19 @@ def enviar_mensaje(mensaje, conn):
     return recibir_mensaje(conn)
 
 def refrescar_lobbies():
+    global lobbies 
+    global botones_lobby
+    lobbies = []
+    botones_lobby = []
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect((socket.gethostname(), 5000))
     enviar = {"opcion": "refrescar"}
     lobbies = enviar_mensaje(enviar, s)
-    print("N lobbby| usuarios")
-    for i in range(len(lobbies)):
-        print(i+1, lobbies[i],"/", 2)
-    s.close()
+    for i in range(len(lobbies)) : 
+        botones_lobby.append(pygame.Rect(10, 50 + i*60, 350, 50))          
+        pygame.draw.rect(SCREEN, COLOR_SECUNDARIO, botones_lobby[i])
+        textoLobby = FONT.render("Lobby " + str(i+1)+" jugadores: "+str(lobbies[i]) +"/2", True, COLOR_TEXTO, COLOR_SECUNDARIO)
+        SCREEN.blit(textoLobby, (15, 55 + i*60))
 
 def verificar_ganador():
     for i in range(3):
@@ -84,7 +90,15 @@ def verificar_ganador():
             graphical_board[i][2-i][0] = pygame.image.load(f"assets/Winning {ganador}.png")
         return ganador
     return ""
-    
+
+def verificar_empate():
+    for i in range(3):
+        for j in range(3):
+            if board[i][j] == "":
+                return False
+    return True
+
+
 def crear_board():
     global graphical_board
     for i in range(3):
@@ -111,22 +125,22 @@ def reiniciar_board():
 crear_board()
 
 WIDTH, HEIGHT = 900, 900
- 
 SCREEN = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Tic Tac Toe!")
-
 BOARD = pygame.image.load("assets/Board.png")
 X_IMG = pygame.image.load("assets/X.png")
 O_IMG = pygame.image.load("assets/O.png")
 
 BG_COLOR = (214, 201, 227)
 
-
-
-
 SCREEN.fill(BG_COLOR)
-SCREEN.blit(BOARD, (64, 64))
+#SCREEN.blit(BOARD, (64, 64))
 
+# Creamos dos botones: uno para refrescar y otro para salir
+boton_refrescar = pygame.Rect(10, 650, 350, 50)
+
+pygame.draw.rect(SCREEN, (127, 99, 110), boton_refrescar)
+textoRefrescar = FONT.render("Refrescar", True, COLOR_TEXTO, (127, 99, 110))
+SCREEN.blit(textoRefrescar, (15, 655))
 pygame.display.update()
 
 def render_board(board, ximg, oimg):
@@ -152,35 +166,43 @@ def registrar_click():
     return [converted_x, converted_y]
 
 
-while True:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            pygame.quit()
-    if conectado == False:
-        opcion = input("Elije opcion: (-1 salir, 0 refrescar, 1 conectar a lobby): ")
-        if opcion == "-1":
-            break
-        elif opcion == "0":
-            refrescar_lobbies()
-        elif opcion == "1":
-            lobby = input("Elije lobby: ")
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.connect((socket.gethostname(), 5000))
-            enviar = {"opcion": "conectar", "lobby": lobby}
-            try:                 
-                recibir = enviar_mensaje(enviar, s)                
-            except:
-                print("error en conectar")
-                s.close()
-                continue
+refrescar_lobbies()
 
-            print("conectado")
-            if recibir == "lobby lleno":
-                print("lobby lleno")
-            else:
-                print("conectado")
-                conectado = True
-                print("esperando a otro jugador")
+
+while True:
+    if conectado == False:       
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                # Obtenemos la posición del ratón
+                mouse_pos = event.pos
+                for i in range(len(botones_lobby)):
+                    if botones_lobby[i].collidepoint(mouse_pos):
+                        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                        s.connect((socket.gethostname(), 5000))
+                        print(i)
+                        enviar = {"opcion": "conectar", "lobby": i}
+                        try:                 
+                            recibir = enviar_mensaje(enviar, s)                
+                        except:
+                            print("error en conectar")
+                            s.close()
+                            continue
+
+                        if recibir == "lobby lleno":
+                            print("lobby lleno")
+                        else:
+                            print("conectado")
+                            conectado = True
+                            SCREEN.fill(BG_COLOR)
+                            SCREEN.blit(BOARD, (64, 64))
+                            print("esperando a otro jugador")
+                
+                if boton_refrescar.collidepoint(mouse_pos):
+                    refrescar_lobbies()
+
+        pygame.display.update()
     else:
         if empezarJuego == False:
             try:
@@ -212,7 +234,22 @@ while True:
                 SCREEN.fill(BG_COLOR)
                 SCREEN.blit(BOARD, (64, 64))
                 pygame.display.update()
-
+            else:
+                #verificar empate
+                if verificar_empate():
+                    reiniciar_board()
+                    time.sleep(2)
+                    print("empate")
+                    empateText = FONT.render("Empate!!", True, COLOR_TEXTO, BG_COLOR)
+                    textRect = empateText.get_rect()
+                    textRect.center = (WIDTH // 2, HEIGHT//2)
+                    SCREEN.blit(empateText, textRect)
+                    #esperar 3 segundos
+                    pygame.display.update()
+                    time.sleep(3)
+                    SCREEN.fill(BG_COLOR)
+                    SCREEN.blit(BOARD, (64, 64))
+                    pygame.display.update()
             try:
                 recibir = enviar_mensaje({"opcion": "jugando"}, s)
                 
@@ -222,6 +259,8 @@ while True:
                 s.close()
 
             if recibir == "turno":
+                render_board(board, X_IMG, O_IMG)
+                pygame.display.update()
                 print("Es tu turno")
                 ingresandoInput = True
                 while ingresandoInput:
@@ -265,4 +304,4 @@ while True:
                 render_board(board, X_IMG, O_IMG)
                 pygame.display.update()
 
-        
+    pygame.display.update()    
