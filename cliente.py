@@ -9,6 +9,11 @@ pygame.display.set_caption("El gato!!")
 HEADERSIZE = 10
 conectado = False
 s =socket.socket()
+
+
+#Cambiar "socket.gethostname()" por la ip del servidor
+s.bind((socket.gethostname(), 5001))
+
 empezarJuego=False
 board = []
 graphical_board = []
