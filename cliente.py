@@ -126,26 +126,6 @@ def reiniciar_board():
             graphical_board[i][j][0] = None
             graphical_board[i][j][1] = None
 
-crear_board()
-
-WIDTH, HEIGHT = 900, 900
-SCREEN = pygame.display.set_mode((WIDTH, HEIGHT))
-BOARD = pygame.image.load("assets/Board.png")
-X_IMG = pygame.image.load("assets/X.png")
-O_IMG = pygame.image.load("assets/O.png")
-
-BG_COLOR = (214, 201, 227)
-
-SCREEN.fill(BG_COLOR)
-#SCREEN.blit(BOARD, (64, 64))
-
-# Creamos dos botones: uno para refrescar y otro para salir
-boton_refrescar = pygame.Rect(10, 650, 350, 50)
-
-pygame.draw.rect(SCREEN, (127, 99, 110), boton_refrescar)
-textoRefrescar = FONT.render("Refrescar", True, COLOR_TEXTO, (127, 99, 110))
-SCREEN.blit(textoRefrescar, (15, 655))
-pygame.display.update()
 
 def render_board(board, ximg, oimg):
     global graphical_board
@@ -168,6 +148,25 @@ def registrar_click():
     converted_x = (current_pos[0]-65)/835*2
     converted_y = current_pos[1]/835*2
     return [converted_x, converted_y]
+
+crear_board()
+
+WIDTH, HEIGHT = 900, 900
+SCREEN = pygame.display.set_mode((WIDTH, HEIGHT))
+BOARD = pygame.image.load("assets/Board.png")
+X_IMG = pygame.image.load("assets/X.png")
+O_IMG = pygame.image.load("assets/O.png")
+
+BG_COLOR = (214, 201, 227)
+
+SCREEN.fill(BG_COLOR)
+
+boton_refrescar = pygame.Rect(10, 650, 350, 50)
+
+pygame.draw.rect(SCREEN, (127, 99, 110), boton_refrescar)
+textoRefrescar = FONT.render("Refrescar", True, COLOR_TEXTO, (127, 99, 110))
+SCREEN.blit(textoRefrescar, (15, 655))
+pygame.display.update()
 
 
 refrescar_lobbies()
