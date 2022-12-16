@@ -8,7 +8,7 @@ CANTIDADLOBBY = 10
 HEADERSIZE = 10
 
 #ingresar aqui la direccion del servidor, ipv4 local
-IPSERVER = ''
+IPSERVER = '127.0.0.1'
 
 lobbies = []
 #crear el diccionario con los datos del lobby vacios

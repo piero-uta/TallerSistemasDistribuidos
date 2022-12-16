@@ -11,7 +11,7 @@ conectado = False
 s =socket.socket()
 
 #Ingresar aqui la ip del server, ipv4 publica del servidor
-IPSERVER = ''
+IPSERVER = '127.0.0.1'
 
 empezarJuego=False
 board = []
