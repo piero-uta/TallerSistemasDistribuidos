@@ -56,7 +56,7 @@ def refrescar_lobbies():
     lobbies = []
     botones_lobby = []
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect((IPSERVER, 5001))
+    s.connect((IPSERVER, 5000))
     enviar = {"opcion": "refrescar"}
     lobbies = enviar_mensaje(enviar, s)
     for i in range(len(lobbies)) : 
@@ -183,7 +183,7 @@ while True:
                 for i in range(len(botones_lobby)):
                     if botones_lobby[i].collidepoint(mouse_pos):
                         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                        s.connect((IPSERVER, 5001))
+                        s.connect((IPSERVER, 5000))
                         print(i)
                         enviar = {"opcion": "conectar", "lobby": i}
                         try:                 
