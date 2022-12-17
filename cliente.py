@@ -56,7 +56,7 @@ def refrescar_lobbies():
     lobbies = []
     botones_lobby = []
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect((IPSERVER, 5000))
+    s.connect((IPSERVER, 5001))
     enviar = {"opcion": "refrescar"}
     lobbies = enviar_mensaje(enviar, s)
     for i in range(len(lobbies)) : 
@@ -183,7 +183,7 @@ while True:
                 for i in range(len(botones_lobby)):
                     if botones_lobby[i].collidepoint(mouse_pos):
                         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                        s.connect((IPSERVER, 5000))
+                        s.connect((IPSERVER, 5001))
                         print(i)
                         enviar = {"opcion": "conectar", "lobby": i}
                         try:                 
@@ -201,7 +201,7 @@ while True:
                             SCREEN.fill(BG_COLOR)
                             SCREEN.blit(BOARD, (64, 64))
                             print("esperando a otro jugador")
-                
+
                 if boton_refrescar.collidepoint(mouse_pos):
                     refrescar_lobbies()
 
@@ -218,7 +218,7 @@ while True:
                     print("Comienza juego")
                     empezarJuego=True
         else:          
-            #verificar si alguien gano
+            #verificar si alguien gano o empate
             ganador = verificar_ganador()
             if ganador != "":
                 reiniciar_board()              
@@ -238,7 +238,6 @@ while True:
                 SCREEN.blit(BOARD, (64, 64))
                 pygame.display.update()
             else:
-                #verificar empate
                 if verificar_empate():
                     reiniciar_board()
                     time.sleep(2)

@@ -7,9 +7,6 @@ import time
 CANTIDADLOBBY = 10
 HEADERSIZE = 10
 
-#ingresar aqui la direccion del servidor, ipv4 local
-IPSERVER = '127.0.0.1'
-
 lobbies = []
 #crear el diccionario con los datos del lobby vacios
 SOCKETVACIO=socket.socket()
@@ -25,7 +22,7 @@ for i in range(CANTIDADLOBBY):
 #crear socket
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-s.bind((IPSERVER, 5000))
+s.bind((socket.gethostname(), 5000))
 s.listen(CANTIDADLOBBY*2)
 
 
